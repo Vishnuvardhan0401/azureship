@@ -1,0 +1,71 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - app/*
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  azureSubscription: sc-azureship
+  acrName: acrazureshipgstyz
+  acrServer: acrazureshipgstyz.azurecr.io
+  imageName: azureship
+  webAppName: app-azureship-dev-gstyz
+  resourceGroup: rg-azureship-dev
+
+stages:
+  - stage: Build
+    displayName: Build and push image
+    jobs:
+      - job: BuildPush
+        steps:
+          - task: AzureCLI@2
+            displayName: Build and push to ACR
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az acr login --name $(acrName)
+                docker build -t $(acrServer)/$(imageName):$(Build.BuildId) -t $(acrServer)/$(imageName):latest ./app
+                docker push $(acrServer)/$(imageName):$(Build.BuildId)
+                docker push $(acrServer)/$(imageName):latest
+
+  - stage: Deploy
+    displayName: Deploy to App Service
+    dependsOn: Build
+    jobs:
+      - job: Deploy
+        steps:
+          - task: AzureCLI@2
+            displayName: Update web app image
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az webapp config set \
+                  --name $(webAppName) \
+                  --resource-group $(resourceGroup) \
+                  --linux-fx-version "DOCKER|$(acrServer)/$(imageName):$(Build.BuildId)"
+                az webapp restart --name $(webAppName) --resource-group $(resourceGroup)
+
+          - task: AzureCLI@2
+            displayName: Health check
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                for i in {1..12}; do
+                  code=$(curl -s -o /dev/null -w "%{http_code}" https://$(webAppName).azurewebsites.net/health)
+                  echo "Attempt $i: HTTP $code"
+                  if [ "$code" = "200" ]; then exit 0; fi
+                  sleep 15
+                done
+                echo "Health check failed"
+                exit 1
