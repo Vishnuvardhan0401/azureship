@@ -133,6 +133,9 @@ resource "azurerm_linux_web_app" "app" {
     WEBSITES_PORT = "8000"
     APP_VERSION   = "1.0.0"
   }
+  lifecycle {
+    ignore_changes = [site_config[0].application_stack]
+  }
 }
 
 resource "azurerm_role_assignment" "acr_pull" {
