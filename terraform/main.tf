@@ -145,3 +145,53 @@ resource "azurerm_role_assignment" "acr_pull" {
   role_definition_name = "AcrPull"
   principal_id         = azurerm_linux_web_app.app.identity[0].principal_id
 }
+resource "azurerm_log_analytics_workspace" "law" {
+  name                = "log-${local.name}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+  tags                = local.tags
+}
+
+resource "azurerm_application_insights" "appi" {
+  name                = "appi-${local.name}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  workspace_id        = azurerm_log_analytics_workspace.law.id
+  application_type    = "web"
+  tags                = local.tags
+}
+
+resource "azurerm_monitor_action_group" "email" {
+  name                = "ag-${local.name}"
+  resource_group_name = azurerm_resource_group.rg.name
+  short_name          = "azureship"
+
+  email_receiver {
+    name          = "owner"
+    email_address = var.alert_email
+  }
+}
+
+resource "azurerm_monitor_metric_alert" "http5xx" {
+  name                = "alert-${local.name}-http5xx"
+  resource_group_name = azurerm_resource_group.rg.name
+  scopes              = [azurerm_linux_web_app.app.id]
+  description         = "Fires when the app returns 5xx errors"
+  severity            = 2
+  frequency           = "PT1M"
+  window_size         = "PT5M"
+
+  criteria {
+    metric_namespace = "Microsoft.Web/sites"
+    metric_name      = "Http5xx"
+    aggregation      = "Total"
+    operator         = "GreaterThan"
+    threshold        = 5
+  }
+
+  action {
+    action_group_id = azurerm_monitor_action_group.email.id
+  }
+}

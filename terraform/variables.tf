@@ -20,3 +20,7 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+variable "alert_email" {
+  description = "Email for alerts"
+  type        = string
+}
