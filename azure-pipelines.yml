@@ -11,10 +11,10 @@ pool:
 
 variables:
   azureSubscription: sc-azureship
-  acrName: acrazureshipgstyz
-  acrServer: acrazureshipgstyz.azurecr.io
+  acrName: acrazureshipee69y
+  acrServer: acrazureshipee69y.azurecr.io
   imageName: azureship
-  webAppName: app-azureship-dev-gstyz
+  webAppName: app-azureship-dev-ee69y
   resourceGroup: rg-azureship-dev
 
 stages:
