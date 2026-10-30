@@ -134,10 +134,12 @@ resource "azurerm_linux_web_app" "app" {
     APP_VERSION   = "1.0.0"
   }
   lifecycle {
-    ignore_changes = [site_config[0].application_stack]
+    ignore_changes = [
+      site_config[0].application_stack,
+      app_settings,
+    ]
   }
 }
-
 resource "azurerm_role_assignment" "acr_pull" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"
