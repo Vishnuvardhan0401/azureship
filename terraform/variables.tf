@@ -24,3 +24,8 @@ variable "alert_email" {
   description = "Email for alerts"
   type        = string
 }
+variable "suffix" {
+  description = "Fixed suffix for globally unique names"
+  type        = string
+  default     = "ee69y"
+}
